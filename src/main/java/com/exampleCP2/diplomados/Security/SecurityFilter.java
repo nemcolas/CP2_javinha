@@ -1,61 +1,50 @@
 package com.exampleCP2.diplomados.Security;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
+import java.util.Date;
 
 @Component
-public class SecurityFilter extends OncePerRequestFilter {
+public class JwtTokenProvider {
 
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    @Value("${jwt.secret}")
+    private String jwtSecret;
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
-        // Pega o token do header Authorization
-        String token = getTokenFromRequest(request);
+    public String generateToken(String username) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpiration);
 
-        // Valida o token e extrai o username
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            String username = jwtTokenProvider.getUsernameFromToken(token);
-
-            // Carrega o usuário com base no username do token
-            var userDetails = userDetailsService.loadUserByUsername(username);
-
-            if (userDetails != null) {
-                // Cria um objeto de autenticação
-                var authentication = new JwtAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                // Seta o usuário autenticado no contexto de segurança do Spring
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-            }
-        }
-
-        // Continua a requisição no filtro
-        filterChain.doFilter(request, response);
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .compact();
     }
 
-    // Função para obter o token do cabeçalho Authorization
-    private String getTokenFromRequest(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
+    public String getUsernameFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(jwtSecret)
+                .parseClaimsJws(token)
+                .getBody();
 
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        return claims.getSubject();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
-
-        return null;
     }
 }
