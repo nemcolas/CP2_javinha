@@ -1,4 +1,4 @@
-package com.example.demo.security;
+package com.exampleCP2.diplomados.Security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -17,7 +17,7 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    // Gera o token JWT
+    // Método para gerar o token JWT
     public String generateToken(String username) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
@@ -30,7 +30,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Pega o username do token
+    // Método para pegar o username a partir do token JWT
     public String getUsernameFromToken(String token) {
         Claims claims = Jwts.parser()
                 .setSigningKey(jwtSecret)
@@ -40,13 +40,12 @@ public class JwtTokenProvider {
         return claims.getSubject();
     }
 
-    // Valida o token JWT
+    // Método para validar o token JWT
     public boolean validateToken(String token) {
         try {
             Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token);
             return true;
         } catch (Exception e) {
-            // Token inválido ou expirado
             return false;
         }
     }

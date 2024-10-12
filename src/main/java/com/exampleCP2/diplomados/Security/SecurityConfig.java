@@ -1,8 +1,9 @@
 package com.exampleCP2.diplomados.Security;
 
-
-import com.exampleCP2.diplomados.Security.SecurityFilter;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -21,13 +22,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
+    public SecurityFilterChain securityFilterChain(@NotNull HttpSecurity http) throws Exception {
+        http.csrf().disable()
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/register").permitAll()
-                        .requestMatchers("/api/diploma/**").authenticated() // Requer autenticação
-                        .anyRequest().denyAll() // Negar qualquer outro acesso não autorizado
+                        .requestMatchers("/api/diploma/**").authenticated() // Autenticação necessária
+                        .anyRequest().denyAll()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
